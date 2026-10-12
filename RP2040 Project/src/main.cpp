@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-#include "drivers/ButtonController.h"
+#include "drivers/JoystickController.h"
+#include "drivers/BuzzerController.h"
 #include "app/SnakeGame.h"
 
 // =============================================================================
@@ -8,8 +9,9 @@
 // =============================================================================
 
 static TFT_eSPI tft;
-static ButtonController buttonController;
-static SnakeGame game(tft, buttonController);
+static JoystickController joystickController;
+static BuzzerController buzzerController;
+static SnakeGame game(tft, joystickController, buzzerController);
 
 void setup() {
     Serial.begin(115200);

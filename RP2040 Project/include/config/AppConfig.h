@@ -5,11 +5,34 @@
 namespace Config {
 
     namespace Pins {
-        constexpr uint8_t BTN_UP     = 7;
-        constexpr uint8_t BTN_DOWN   = 8;
-        constexpr uint8_t BTN_LEFT   = 9;
-        constexpr uint8_t BTN_RIGHT  = 10;
-        constexpr uint8_t BTN_SELECT = 11;
+        // --- Joystick Pins ---
+        constexpr uint8_t JOYSTICK_VRX = 26; // Analog X-axis (GP26 / ADC0)
+        constexpr uint8_t JOYSTICK_VRY = 27; // Analog Y-axis (GP27 / ADC1)
+        constexpr uint8_t JOYSTICK_SW  = 8;  // Optional push switch (GP8, active LOW)
+
+        // --- Push Buttons ---
+        constexpr uint8_t BTN_SELECT   = 7;  // Primary Select button (GP7, active LOW)
+
+        // --- Buzzer Pin ---
+        constexpr uint8_t BUZZER       = 15; // Audio buzzer positive (+) pin (GP15)
+
+        // --- Legacy 4-Button D-pad (preserved for reference/backwards-compatibility) ---
+        constexpr uint8_t BTN_UP       = 7;
+        constexpr uint8_t BTN_DOWN     = 8;
+        constexpr uint8_t BTN_LEFT     = 9;
+        constexpr uint8_t BTN_RIGHT    = 10;
+    }
+
+    namespace Joystick {
+        constexpr int16_t DEADZONE    = 180;   // Deadband threshold around resting center (0-512)
+        constexpr bool    INVERT_X    = false; // Set to true if Left / Right directions are flipped
+        constexpr bool    INVERT_Y    = false; // Set to true if Up / Down directions are flipped
+        constexpr bool    SWAP_AXES   = false; // Set to true if joystick is mounted rotated 90 degrees
+        constexpr bool    ENABLE_SW   = true;  // Treat joystick thumb click (SW) as secondary SELECT
+    }
+
+    namespace BuzzerConfig {
+        constexpr bool    ENABLED     = true;  // Master audio toggle
     }
 
     namespace SerialComm {

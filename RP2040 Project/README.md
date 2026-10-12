@@ -1,229 +1,192 @@
-# RP2040 Zero + ST7789 Display Node
+# RP2040 Zero Snake Arcade Game
 
-A production-grade, modular embedded project demonstrating clean software architecture (**SOLID principles**, **Separation of Concerns**, **Dependency Injection**) running on an **RP2040 Zero** with an **ST7789 IPS LCD** (240x240, CS-less module).
+A high-performance, modular arcade Snake game with rich retro sound effects and vibrant graphics, running on a **Raspberry Pi RP2040 Zero** with an **ST7789 IPS LCD** (240x240), an **analog 2-axis joystick**, a dedicated **Select button**, and an **audio buzzer**.
+
+Strictly engineered with clean software architecture (**SOLID principles**, **Separation of Concerns**, **Dependency Injection**).
 
 ---
 
 ## 📖 Table of Contents
-1. [Project Overview](#project-overview)
-2. [Hardware Requirements](#hardware-requirements)
-3. [Wiring & Pinout Reference](#wiring--pinout-reference)
+1. [Hardware Bill of Materials](#hardware-bill-of-materials)
+2. [Wiring & Pinout Reference](#wiring--pinout-reference)
+3. [Game Features & Audio](#game-features--audio)
 4. [Software Architecture & Design Principles](#software-architecture--design-principles)
-5. [Prerequisites & Environment Setup](#prerequisites--environment-setup)
+5. [Configuration & Tuning](#configuration--tuning)
 6. [Building & Uploading](#building--uploading)
-7. [Serial Monitor & Usage](#serial-monitor--usage)
-8. [Configuration & Customization](#configuration--customization)
-9. [Troubleshooting & Common Pitfalls](#troubleshooting--common-pitfalls)
+7. [Troubleshooting & Calibration](#troubleshooting--calibration)
 
 ---
 
-## 🚀 Project Overview
+## 🛠 Hardware Bill of Materials
 
-* **Target Microcontroller:** Raspberry Pi RP2040 (RP2040-Zero form factor).
-* **Display Controller:** ST7789 SPI IPS LCD (240x240).
-* **Graphics Library:** `TFT_eSPI` configured directly for RP2040 hardware SPI0 registers.
-* **Architecture:** Enterprise-grade decoupling. Business logic is isolated from hardware drivers and configuration.
-
----
-
-## 🛠 Hardware Requirements
-
-| Item | Details |
+| Component | Description / Role |
 | :--- | :--- |
-| **Microcontroller** | Waveshare RP2040-Zero (or compatible RP2040 board) |
-| **Display Module** | ST7789 IPS SPI LCD (1.3" / 1.54", 240x240, 7-pin or 8-pin without CS pin) |
-| **Interconnects** | Dupont jumper wires (Female-to-Female or Breadboard jumpers) |
+| **Microcontroller** | Waveshare RP2040-Zero (or Raspberry Pi Pico) |
+| **Display** | ST7789 IPS SPI TFT LCD (240 × 240, CS-less or standard) |
+| **Joystick** | 2-Axis Analog Thumb Joystick (5-pin: VCC, GND, VRx, VRy, SW) |
+| **Select Button** | Momentary tactile push button (SPST normally-open) |
+| **Buzzer** | Passive or Active Piezo Buzzer |
+| **Interconnects** | Breadboard & Dupont jumper wires |
 | **Cable** | USB Type-C data cable |
 
 ---
 
 ## 🔌 Wiring & Pinout Reference
 
-> **Important Hardware Note:** Many common ST7789 modules do not expose a Chip Select (`CS`) pin because `CS` is permanently grounded internally on the PCB.
+### Complete System Pin Map
 
-| LCD Pin Name | RP2040 Zero Pin | Function / Hardware Role | Notes |
-| :--- | :--- | :--- | :--- |
-| **GND** | **GND** | Ground | Common system ground |
-| **VCC** | **3V3** or **5V** | Power Supply | If module has an onboard 662K 3.3V LDO regulator, connect to **5V**; otherwise connect to **3V3**. |
-| **SCL / SCK** | **GP2** | Hardware SPI0 SCK | Clock line |
-| **SDA / MOSI**| **GP3** | Hardware SPI0 TX | Data Out (Master Out, Slave In) |
-| **DC / A0** | **GP4** | Data / Command Select | High = Data, Low = Command |
-| **RES / RST** | **GP6** | Hardware Reset | Active-low display reset |
-| **CS** | *N/A* | Chip Select | Leave disconnected (module has CS hardwired to GND). |
-| **BL / BLK** | **3V3** or **GND** | Backlight LED | Most boards: connect to **3V3** (Active-HIGH). Some Chinese modules: connect to **GND** (Active-LOW) or leave floating. |
+```text
+       RP2040-Zero
+      +-----------+
+  GP2 | o       o | GP3  ----> ST7789 SDA/MOSI
+  GP4 | o       o | GP6  ----> ST7789 RES/RST
+  GP7 | o       o | GP8  <---- Joystick SW (Optional)
+ GP15 | o       o | GP26 <---- Joystick VRx (ADC0)
+  3V3 | o       o | GP27 <---- Joystick VRy (ADC1)
+  GND | o       o | 5V
+      +-----------+
+```
+
+### Pin Connection Details
+
+| Module | Pin Label | RP2040 Zero Pin | Function / Hardware Role | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **ST7789 LCD** | **GND** | **GND** | Common Ground | System reference ground |
+| | **VCC** | **3V3** or **5V** | Display Power | 3V3 directly; use 5V if module has onboard 662K LDO regulator |
+| | **SCL / SCK** | **GP2** | Hardware SPI0 SCK | SPI Clock line |
+| | **SDA / MOSI**| **GP3** | Hardware SPI0 TX | SPI Data (MOSI) |
+| | **DC / A0** | **GP4** | Data / Command Select | HIGH = Data, LOW = Command |
+| | **RES / RST** | **GP6** | Display Reset | Active-low hardware reset |
+| | **CS** | *N/A* | Chip Select | Leave disconnected (tied to GND internally on CS-less panels) |
+| | **BLK / BL** | **3V3** | Backlight LED | Connect to 3V3 (or GND on active-low panels) |
+| **Analog Joystick**| **VCC** | **3V3** | Potentiometer Reference | Powered from RP2040 3.3V rail |
+| | **GND** | **GND** | Ground | Common system ground |
+| | **VRx** | **GP26 / ADC0** | Horizontal Axis | Analog input (0–1023, center ~512) |
+| | **VRy** | **GP27 / ADC1** | Vertical Axis | Analog input (0–1023, center ~512) |
+| | **SW** | **GP8** | Built-in Thumb Switch | Active LOW with internal pull-up (optional secondary Select) |
+| **Select Button** | **Signal** | **GP7** | Primary Select Button | Active LOW with internal pull-up (`INPUT_PULLUP`) |
+| | **Other contact**| **GND** | Button Return | Connected directly to Ground |
+| **Buzzer** | **Positive (+)**| **GP15** | Audio Signal | Driven with non-blocking square-wave tones |
+| | **Negative (−)**| **GND** | Buzzer Return | Common system ground |
+
+---
+
+## 🎮 Game Features & Audio
+
+### Gameplay
+- **Fluid Analog Movement:** Joystick input utilizes real-time dominant axis selection with center deadband filtering and automatic power-on center calibration.
+- **Dynamic Speed Progression:** As you eat apples, your score increases and each level ramps up the snake's velocity.
+- **Arcade Visuals:** Neon Cyberpunk styling, drop shadows, level-up banners, and high score tracking.
+- **Pause & Resume:** Press the Select button at any time during gameplay to pause and resume.
+
+### Retro Arcade Sound Effects
+| Sound Event | Trigger | Musical / Acoustic Characteristic |
+| :--- | :--- | :--- |
+| **Game Start** | Press Select on Title or Game Over screen | Upbeat 4-note ascending arcade chime (C5 → E5 → G5 → C6) |
+| **Food Eaten** | Snake swallows an apple | Snappy two-tone 8-bit bite chirp (1046 Hz → 1318 Hz) |
+| **Level Up** | Every 5 apples consumed | Triumphant victory fanfare (E5 → G5 → B5 → E6) |
+| **Game Over** | Snake hits a wall or itself | Descending defeat crunch sequence (A4 → F4 → C4 → F3) |
+| **Pause / Click** | Toggle Pause or UI interaction | Crisp UI notification clicks |
+
+> [!NOTE]
+> All buzzer routines are executed non-blockingly using asynchronous note sequencing, ensuring zero frame rate drop or stuttering during snake movement.
 
 ---
 
 ## 🏛 Software Architecture & Design Principles
 
-This codebase strictly adheres to the **SOLID** design principles and clean architecture:
-
 ```text
-               +-----------------------------+
-               |     Config::AppConfig       |
-               |  (Centralized parameters)   |
-               +--------------+--------------+
-                              |
-+----------------------+      |      +-------------------------+
-|     IDisplay         |      |      |  ICommunicationChannel  |
-|  (Abstract Interface)|      |      |   (Abstract Interface)  |
-+-----------^----------+      |      +------------^------------+
-            |                 |                   |
-       [Implements]           |              [Implements]
-            |                 |                   |
-+-----------+----------+      |      +------------+------------+
-|    ST7789Display     |      |      |      SerialChannel      |
-|  (TFT_eSPI Driver)   |      |      |     (Hardware Serial)   |
-+----------------------+      |      +-------------------------+
-            \                 |                  /
-             \                v                 /
-           +--\--------------------------------/--+
-           |             Application              |
-           |      (Pure Domain Business Logic)    |
-           +------------------+-------------------+
-                              |
-                              v
-                      [src/main.cpp]
-                   (Composition Root)
+                  +-----------------------------+
+                  |     Config::AppConfig       |
+                  |  (Centralized parameters)   |
+                  +--------------+--------------+
+                                 |
+  +--------------------+         |         +--------------------+
+  |  IInputController  |         |         |      IBuzzer       |
+  | (Abstract Interface)         |         | (Abstract Interface)
+  +---------^----------+         |         +---------^----------+
+            |                    |                   |
+       [Implements]              |              [Implements]
+            |                    |                   |
+  +---------+----------+         |         +---------+----------+
+  | JoystickController |         |         |  BuzzerController  |
+  |  (ADC0, ADC1, GP7) |         |         |  (Non-blocking GP15)|
+  +--------------------+         |         +--------------------+
+            \                    |                    /
+             \                   v                   /
+              +-------------------------------------+
+              |              SnakeGame              |
+              |       (Decoupled Arcade Logic)      |
+              +------------------+------------------+
+                                 |
+                                 v
+                         [src/main.cpp]
+                       (Composition Root)
 ```
 
-### Key Principles Applied:
-* **Single Responsibility Principle (SRP):**
-  * `AppConfig.h`: System constants, geometry, palette, timing.
-  * `Application`: Core state machine, uptime, message routing.
-  * `ST7789Display`: Low-level pixel layout and drawing primitives.
-  * `SerialChannel`: Raw stream reading and response formatting.
-* **Open / Closed Principle (OCP):**
-  * Add an OLED display (`SSD1306Display`) or a Bluetooth channel (`BLEChannel`) simply by implementing the interfaces. `Application.cpp` remains untouched.
-* **Liskov Substitution Principle (LSP):**
-  * Concrete drivers can be substituted anywhere their interface is expected without breaking behavior.
-* **Interface Segregation Principle (ISP):**
-  * Interfaces (`IDisplay`, `ICommunicationChannel`) are minimal, focused, and purposeful.
-* **Dependency Inversion Principle (DIP):**
-  * The application does not instantiate or directly reference `TFT_eSPI` or `Serial`. It receives abstract references via constructor injection in `src/main.cpp` (Composition Root).
-
-### Directory Layout
-```text
-├── include/
-│   ├── config/
-│   │   └── AppConfig.h                # All system constants and UI coordinates
-│   ├── interfaces/
-│   │   ├── IDisplay.h                 # Abstract display interface
-│   │   └── ICommunicationChannel.h    # Abstract communication channel
-│   ├── drivers/
-│   │   ├── ST7789Display.h            # TFT_eSPI driver wrapper
-│   │   └── SerialChannel.h            # Serial communication wrapper
-│   └── app/
-│       └── Application.h              # Application business logic header
-├── src/
-│   ├── drivers/
-│   │   ├── ST7789Display.cpp
-│   │   └── SerialChannel.cpp
-│   ├── app/
-│   │   └── Application.cpp
-│   └── main.cpp                       # Composition Root (Dependency Injection)
-├── platformio.ini                     # Build flags, SPI pins, and library dependencies
-└── README.md
-```
+- **Single Responsibility Principle (SRP):**
+  - `JoystickController`: Dedicated to analog sampling, zero-point calibration, deadzone filtering, and button debouncing.
+  - `BuzzerController`: Dedicated to asynchronous audio sequencing and pitch management.
+  - `SnakeGame`: Contains only core game mechanics, rendering calls, and state transitions.
+- **Dependency Inversion Principle (DIP):**
+  - `SnakeGame` depends only on abstract interfaces (`IInputController`, `IBuzzer`), never on concrete hardware classes. All dependencies are injected at the Composition Root in `src/main.cpp`.
+- **Open / Closed Principle (OCP):**
+  - Input or audio hardware can be swapped (e.g., rotary encoder, I2S DAC) without touching a single line of `SnakeGame`.
 
 ---
 
-## 💻 Prerequisites & Environment Setup
+## ⚙️ Configuration & Tuning
 
-### 1. PlatformIO CLI or VS Code
-* Install [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode) in VS Code, or install PlatformIO Core CLI:
-  ```bash
-  pip install platformio
-  ```
+All hardware mappings and gameplay tuning parameters live in [`include/config/AppConfig.h`](include/config/AppConfig.h):
 
-### 2. Linux USB Permissions (udev rules)
-If building on Linux, ensure your user account has access to the USB serial ports:
-```bash
-sudo usermod -a -G dialout $USER
-# Optional: Install PlatformIO udev rules
-curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/system/99-platformio-udev.rules | sudo tee /etc/udev/rules.d/99-platformio-udev.rules
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+### Joystick Settings
+```cpp
+namespace Config::Joystick {
+    constexpr int16_t DEADZONE    = 180;   // Deadband threshold around resting center (0-512)
+    constexpr bool    INVERT_X    = false; // Flip Left/Right if your module is inverted
+    constexpr bool    INVERT_Y    = false; // Flip Up/Down if your module is inverted
+    constexpr bool    SWAP_AXES   = false; // Set to true if mounted rotated 90 degrees
+    constexpr bool    ENABLE_SW   = true;  // Treat joystick thumb click (SW) as secondary SELECT
+}
+```
+
+### Audio Toggle
+```cpp
+namespace Config::BuzzerConfig {
+    constexpr bool    ENABLED     = true;  // Master audio mute switch (true = sound on)
+}
 ```
 
 ---
 
 ## 🔨 Building & Uploading
 
-### 1. Build the Project
-Compile the firmware and verify dependencies:
+### 1. Build the Firmware
+Compile the project with PlatformIO:
 ```bash
 pio run
 ```
 
-### 2. Flash to RP2040 Zero
-* If your RP2040 is already running Arduino firmware with USB CDC enabled, PlatformIO can reset it automatically:
+### 2. Upload to RP2040 Zero
+* Connect your RP2040 Zero via USB-C.
+* Run:
   ```bash
   pio run -t upload
   ```
-* **Manual Bootloader Mode (if auto-reset fails):**
+* **Bootloader Mode (if auto-upload does not detect board):**
   1. Hold down the **BOOT** button on the RP2040 Zero.
-  2. Plug the USB cable into your computer (or press and release the **RESET** button while holding **BOOT**).
-  3. Release the **BOOT** button. The board mounts as a USB drive (`RPI-RP2`).
-  4. Run `pio run -t upload`.
+  2. Press and release the **RESET** button (or plug in the USB-C cable while holding **BOOT**).
+  3. Release the **BOOT** button (board mounts as `RPI-RP2` drive).
+  4. Run `pio run -t upload` or copy `.pio/build/rp2040zero/firmware.uf2` directly onto the mounted drive.
 
 ---
 
-## 💬 Serial Monitor & Usage
-
-1. Open the PlatformIO Serial Monitor at **115200 baud**:
-   ```bash
-   pio device monitor
-   ```
-2. Type any text and press **Enter**.
-3. **Behavior:**
-   * The text will immediately be transmitted to the RP2040.
-   * The display updates the central card with the new message and increments the message counter.
-   * The RP2040 will echo an acknowledgment back over serial:
-     ```text
-     [ACK] Received (1): Hello World!
-     ```
-
----
-
-## ⚙️ Configuration & Customization
-
-### Changing Display Layout or Colors
-All layout coordinates, font scales, colors, and timing parameters are isolated in [`include/config/AppConfig.h`](include/config/AppConfig.h):
-```cpp
-namespace Config {
-    namespace Display {
-        constexpr uint32_t COLOR_HEADER   = TFT_NAVY;
-        constexpr uint32_t COLOR_PAYLOAD  = TFT_GREEN;
-        constexpr size_t   MAX_DISPLAY_CHARS = 16;
-        // ...
-    }
-}
-```
-
-### Changing Pin Assignments
-Pin assignments for `TFT_eSPI` are configured as compile-time macros in [`platformio.ini`](platformio.ini):
-```ini
-build_flags =
-    -D USER_SETUP_LOADED=1
-    -D ST7789_DRIVER=1
-    -D TFT_WIDTH=240
-    -D TFT_HEIGHT=240
-    -D TFT_MOSI=3        ; Hardware SPI0 TX
-    -D TFT_SCLK=2        ; Hardware SPI0 SCK
-    -D TFT_DC=4          ; Data/Command pin
-    -D TFT_RST=6         ; Reset pin
-    ; TFT_CS omitted intentionally for CS-less modules
-```
-
----
-
-## ❓ Troubleshooting & Common Pitfalls
+## ❓ Troubleshooting & Calibration
 
 | Symptom | Cause | Solution |
 | :--- | :--- | :--- |
-| **Screen is completely dark / no light** | Backlight (`BLK`) not powered or inverted polarity | • Try connecting `BLK` to **3V3**.<br>• If still dark, connect `BLK` to **GND** (some boards are active-low).<br>• On some boards, disconnect `BLK` completely (has internal pull-up). |
-| **Backlight is on, but screen is blank/white** | Voltage drop on onboard 3.3V LDO regulator | Many ST7789 modules contain an onboard 3.3V regulator (chip labeled `662K`). Connect the display's **VCC** pin to **5V** instead of **3V3**. |
-| **Text colors look inverted (e.g. blue instead of red)** | Panel RGB/BGR order mismatch | Add `-D TFT_RGB_ORDER=TFT_BGR` (or `TFT_RGB`) to `build_flags` in `platformio.ini`. |
-| **Display shows noise / random pixels on edges** | Wrong resolution defined | If your screen is 135x240 or 240x320, adjust `TFT_WIDTH` and `TFT_HEIGHT` in `platformio.ini` and `AppConfig.h`. |
-| **Upload error: `No port found`** | RP2040 not in bootloader mode | Hold the **BOOT** button while plugging the USB-C cable in, then re-run `pio run -t upload`. |
+| **Snake moves in the opposite direction on one axis** | Potentiometer wiper polarity differs by vendor | Set `INVERT_X = true` or `INVERT_Y = true` in `AppConfig.h`. |
+| **Snake moves diagonally or turns when stick is barely moved** | Deadzone too small or stick mechanical drift | Increase `DEADZONE` (e.g., from `180` to `220`) in `AppConfig.h`. |
+| **Select button not responding** | Wiring not pulling GP7 to GND when pressed | Verify one leg of the button connects to **GP7** and the other connects to **GND**. |
+| **No sound from buzzer** | Polarity reversed or pin disconnected | Ensure positive (+) leg is connected to **GP15** and negative (−) is connected to **GND**. If using an active buzzer with fixed voltage requirements, check `BuzzerConfig::ENABLED`. |
+| **Display backlight is dark** | Backlight pin not powered | Connect display **BLK** pin to **3V3** (or **GND** on active-LOW panels). |

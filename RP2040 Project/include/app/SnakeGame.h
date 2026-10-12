@@ -3,6 +3,7 @@
 #include <TFT_eSPI.h>
 #include "config/AppConfig.h"
 #include "interfaces/IInputController.h"
+#include "interfaces/IBuzzer.h"
 
 enum class Direction { UP, DOWN, LEFT, RIGHT };
 enum class GameState { TITLE, PLAYING, PAUSED, GAME_OVER };
@@ -15,14 +16,22 @@ struct Point {
 
 class SnakeGame {
 public:
+    SnakeGame(TFT_eSPI& tft, IInputController& input, IBuzzer& buzzer) 
+        : _tft(tft), _input(input), _buzzer(&buzzer), _state(GameState::TITLE),
+          _dir(Direction::RIGHT), _nextDir(Direction::RIGHT),
+          _snakeLength(3), _score(0), _highScore(0), _level(1), _foodEaten(0),
+          _speedMs(Config::Game::INITIAL_SPEED_MS), _lastMoveTime(0),
+          _animFrame(0), _lastAnimTime(0), _titleSnakeX(0) {}
+
     SnakeGame(TFT_eSPI& tft, IInputController& input) 
-        : _tft(tft), _input(input), _state(GameState::TITLE),
+        : _tft(tft), _input(input), _buzzer(nullptr), _state(GameState::TITLE),
           _dir(Direction::RIGHT), _nextDir(Direction::RIGHT),
           _snakeLength(3), _score(0), _highScore(0), _level(1), _foodEaten(0),
           _speedMs(Config::Game::INITIAL_SPEED_MS), _lastMoveTime(0),
           _animFrame(0), _lastAnimTime(0), _titleSnakeX(0) {}
 
     void init() {
+        if (_buzzer) _buzzer->init();
         _input.init();
         _tft.init();
         _tft.setRotation(0);
@@ -30,6 +39,7 @@ public:
     }
 
     void tick() {
+        if (_buzzer) _buzzer->tick();
         handleInput();
 
         switch (_state) {
@@ -53,6 +63,7 @@ public:
 private:
     TFT_eSPI& _tft;
     IInputController& _input;
+    IBuzzer* _buzzer;
 
     GameState _state;
     Direction _dir;
@@ -114,6 +125,8 @@ private:
     // 2. Game Progression
     // =========================================================================
     void startNewGame() {
+        if (_buzzer) _buzzer->play(SoundEffect::START_GAME);
+
         _snakeLength = 4;
         _snake[0] = { 6, 6 };
         _snake[1] = { 5, 6 };
@@ -141,6 +154,7 @@ private:
     void pauseGame() {
         _state = GameState::PAUSED;
         _blinkVisible = true;
+        if (_buzzer) _buzzer->play(SoundEffect::PAUSE);
 
         // Large Arcade Modal Card
         _tft.fillRoundRect(20, 65, 200, 110, 10, Config::Colors::MODAL_BG);
@@ -157,6 +171,7 @@ private:
 
     void resumeGame() {
         _state = GameState::PLAYING;
+        if (_buzzer) _buzzer->play(SoundEffect::BUTTON_CLICK);
 
         _tft.fillScreen(Config::Colors::GRID_BG);
         drawHUD();
@@ -236,7 +251,10 @@ private:
             if (_speedMs > Config::Game::MIN_SPEED_MS) {
                 _speedMs -= Config::Game::SPEED_STEP_MS;
             }
+            if (_buzzer) _buzzer->play(SoundEffect::LEVEL_UP);
             triggerLevelUpBanner();
+        } else {
+            if (_buzzer) _buzzer->play(SoundEffect::FOOD_EATEN);
         }
         drawHUD();
     }
@@ -294,7 +312,7 @@ private:
         // Bottom Controls Banner
         _tft.fillRect(10, 208, 220, 20, Config::Colors::HEADER_BG);
         _tft.setTextColor(Config::Colors::TEXT_WHITE, Config::Colors::HEADER_BG);
-        _tft.drawString("D-PAD: MOVE | SEL: PAUSE", 120, 218, 2);
+        _tft.drawString("STICK: MOVE | BTN: SELECT", 120, 218, 2);
     }
 
     void updateTitleAnimation() {
@@ -359,6 +377,7 @@ private:
 
     void triggerGameOver() {
         _state = GameState::GAME_OVER;
+        if (_buzzer) _buzzer->play(SoundEffect::GAME_OVER);
 
         // Impact flash
         _tft.drawRect(0, 0, Config::Game::SCREEN_W, Config::Game::SCREEN_H, Config::Colors::DANGER_EDGE);
