@@ -1,23 +1,21 @@
 #include <Arduino.h>
-#include "drivers/ST7789Display.h"
-#include "drivers/SerialChannel.h"
-#include "app/Application.h"
+#include <TFT_eSPI.h>
+#include "drivers/ButtonController.h"
+#include "app/SnakeGame.h"
 
 // =============================================================================
 // Composition Root (Dependency Injection)
-// Instantiates concrete hardware adapters and injects them into application core.
 // =============================================================================
 
-static ST7789Display hardwareDisplay;
-static SerialChannel serialChannel;
-
-// Core business logic depends ONLY on abstractions
-static Application app(hardwareDisplay, serialChannel);
+static TFT_eSPI tft;
+static ButtonController buttonController;
+static SnakeGame game(tft, buttonController);
 
 void setup() {
-    app.initialize();
+    Serial.begin(115200);
+    game.init();
 }
 
 void loop() {
-    app.tick();
+    game.tick();
 }
