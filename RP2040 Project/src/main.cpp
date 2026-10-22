@@ -14,7 +14,8 @@ static BuzzerController buzzerController;
 static SnakeGame game(tft, joystickController, buzzerController);
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(Config::SerialComm::BAUD_RATE);
+    delay(Config::SerialComm::BOOT_DELAY_MS);
     game.init();
 }
 

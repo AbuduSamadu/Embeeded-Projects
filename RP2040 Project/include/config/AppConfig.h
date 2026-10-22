@@ -24,11 +24,15 @@ namespace Config {
     }
 
     namespace Joystick {
-        constexpr int16_t DEADZONE    = 180;   // Deadband threshold around resting center (0-512)
-        constexpr bool    INVERT_X    = false; // Set to true if Left / Right directions are flipped
-        constexpr bool    INVERT_Y    = false; // Set to true if Up / Down directions are flipped
-        constexpr bool    SWAP_AXES   = false; // Set to true if joystick is mounted rotated 90 degrees
-        constexpr bool    ENABLE_SW   = true;  // Treat joystick thumb click (SW) as secondary SELECT
+        constexpr int16_t DEADZONE            = 180;   // Deadband threshold around resting center (0-512)
+        constexpr int16_t AXIS_HYSTERESIS     = 50;    // Margin required to switch perpendicular axis while active
+        constexpr bool    INVERT_X            = false; // Set to true if Left / Right directions are flipped
+        constexpr bool    INVERT_Y            = false; // Set to true if Up / Down directions are flipped
+        constexpr bool    SWAP_AXES           = false; // Set to true if joystick is mounted rotated 90 degrees
+        constexpr bool    ENABLE_SW           = true;  // Treat joystick thumb click (SW) as secondary SELECT
+        constexpr bool    DEBUG_SERIAL        = true;  // Enable real-time serial monitor debug logging
+        constexpr uint32_t DEBUG_INTERVAL_MS  = 200;   // Rate limit for active joystick debug stream (ms)
+        constexpr uint32_t DEBUG_IDLE_MS      = 2000;  // Heartbeat interval while resting at center (ms)
     }
 
     namespace BuzzerConfig {
@@ -82,6 +86,19 @@ namespace Config {
         constexpr uint16_t OFFSET_Y   = HEADER_H;
         constexpr uint16_t MAX_LENGTH = GRID_W * GRID_H;
 
+        // Difficulty Presets: Basic, Medium, Advance
+        struct DifficultyPreset {
+            uint32_t initialSpeedMs;
+            uint32_t minSpeedMs;
+            uint32_t speedStepMs;
+            uint8_t  foodPerLevel;
+            uint16_t scoreMultiplier;
+        };
+
+        constexpr DifficultyPreset DIFFICULTY_BASIC   = { 220, 110, 12, 5, 1 };
+        constexpr DifficultyPreset DIFFICULTY_MEDIUM  = { 160,  60, 15, 5, 2 };
+        constexpr DifficultyPreset DIFFICULTY_ADVANCE = { 105,  40, 10, 4, 3 };
+
         constexpr uint32_t INITIAL_SPEED_MS = 160;
         constexpr uint32_t MIN_SPEED_MS     = 60;
         constexpr uint32_t SPEED_STEP_MS    = 15;
@@ -105,5 +122,8 @@ namespace Config {
         constexpr uint32_t MODAL_BG    = 0x0002; // Dark Navy Glass
         constexpr uint32_t MODAL_EDGE  = 0x07FF; // Neon Cyan Border
         constexpr uint32_t DANGER_EDGE = 0xF800; // Neon Red
+        constexpr uint32_t PORTAL_CYAN = 0x05FD; // Neon Portal Cyan for Pass-Through border
+        constexpr uint32_t CARD_IDLE   = 0x0842; // Unselected menu card background
+        constexpr uint32_t CARD_ACTIVE = 0x18E3; // Selected menu card background
     }
 }
