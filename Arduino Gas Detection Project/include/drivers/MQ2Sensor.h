@@ -28,6 +28,10 @@ public:
     bool isThresholdExceeded() const override;
     bool isRecoveryLevel() const override;
 
+    void setSimulatedValue(uint16_t value) override;
+    void clearSimulation() override;
+    bool isSimulated() const override;
+
     /// Dynamic threshold configuration (for runtime calibration)
     void setThreshold(uint16_t threshold, uint16_t hysteresis);
 
@@ -45,6 +49,9 @@ private:
     uint8_t _sampleIndex;
     uint8_t _sampleCount;
     unsigned long _lastSampleTime;
+
+    bool _isSimulated;
+    uint16_t _simulatedValue;
 
     void sample();
 };

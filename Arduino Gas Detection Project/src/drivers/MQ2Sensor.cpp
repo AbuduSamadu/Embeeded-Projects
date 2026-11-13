@@ -17,7 +17,9 @@ MQ2Sensor::MQ2Sensor(uint8_t analogPin,
       _filteredValue(0),
       _sampleIndex(0),
       _sampleCount(0),
-      _lastSampleTime(0) {
+      _lastSampleTime(0),
+      _isSimulated(false),
+      _simulatedValue(0) {
     for (uint8_t i = 0; i < SystemConfig::SENSOR_FILTER_WINDOW_SIZE; ++i) {
         _samples[i] = 0;
     }
@@ -43,6 +45,12 @@ void MQ2Sensor::update() {
 }
 
 void MQ2Sensor::sample() {
+    if (_isSimulated) {
+        _lastRawValue = _simulatedValue;
+        _filteredValue = _simulatedValue;
+        return;
+    }
+
     _lastRawValue = analogRead(_analogPin);
 
     // Update rolling buffer
@@ -83,4 +91,24 @@ bool MQ2Sensor::isRecoveryLevel() const {
 void MQ2Sensor::setThreshold(uint16_t threshold, uint16_t hysteresis) {
     _alarmThreshold = threshold;
     _hysteresis = hysteresis;
+}
+
+void MQ2Sensor::setSimulatedValue(uint16_t value) {
+    _isSimulated = true;
+    _simulatedValue = value;
+    _lastRawValue = value;
+    _filteredValue = value;
+
+    // Fill filter buffer so moving average immediately reflects the simulated value
+    for (uint8_t i = 0; i < SystemConfig::SENSOR_FILTER_WINDOW_SIZE; ++i) {
+        _samples[i] = value;
+    }
+}
+
+void MQ2Sensor::clearSimulation() {
+    _isSimulated = false;
+}
+
+bool MQ2Sensor::isSimulated() const {
+    return _isSimulated;
 }

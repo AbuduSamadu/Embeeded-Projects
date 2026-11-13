@@ -18,7 +18,7 @@ namespace SystemConfig {
     // GSM / SIM800L CONFIGURATION
     // =========================================================================
     /// Recipient mobile phone number for SMS notifications (international format)
-    constexpr const char* EMERGENCY_PHONE_NUMBER = "+1234567890";
+    constexpr const char* EMERGENCY_PHONE_NUMBER = "+233248666037";
 
     /// SIM800L UART baud rate (9600 is recommended for SoftwareSerial stability)
     constexpr unsigned long GSM_BAUD_RATE = 9600;
@@ -69,6 +69,13 @@ namespace SystemConfig {
 
     /// Buzzer active polarity (true = HIGH to sound, false = LOW to sound)
     constexpr bool BUZZER_ACTIVE_HIGH = true;
+
+    /// Set to true if using a passive buzzer (piezo transducer requiring tone() AC frequency)
+    /// Set to false if using an active buzzer (integrated oscillator driven by DC voltage)
+    constexpr bool BUZZER_IS_PASSIVE = false;
+
+    /// Audible tone frequency in Hertz if BUZZER_IS_PASSIVE is true (typically 2000 - 3000 Hz)
+    constexpr unsigned int BUZZER_TONE_FREQ_HZ = 2500;
 
     /// Alarm buzzer pulsation ON duration in milliseconds
     constexpr unsigned long BUZZER_CADENCE_ON_MS = 250UL;

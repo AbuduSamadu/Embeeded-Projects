@@ -30,6 +30,7 @@ public:
     bool isBusy() const override;
     GsmNetworkStatus getNetworkStatus() const override;
     bool isSmsDispatched() const;
+    void resetCooldown() override;
 
 private:
     SoftwareSerial _serial;

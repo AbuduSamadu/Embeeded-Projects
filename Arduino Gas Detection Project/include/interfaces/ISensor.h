@@ -31,6 +31,15 @@ public:
 
     /// Returns true if reading has dropped below recovery hysteresis threshold
     virtual bool isRecoveryLevel() const = 0;
+
+    /// Set a simulated ADC reading for bench testing
+    virtual void setSimulatedValue(uint16_t value) { (void)value; }
+
+    /// Clear simulated reading and restore live physical readings
+    virtual void clearSimulation() {}
+
+    /// Check if the sensor is currently operating in simulation mode
+    virtual bool isSimulated() const { return false; }
 };
 
 #endif // I_SENSOR_H

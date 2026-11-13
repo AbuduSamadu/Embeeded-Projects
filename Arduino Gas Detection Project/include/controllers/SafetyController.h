@@ -31,6 +31,12 @@ public:
     /// Main non-blocking tick routine to be invoked in Arduino loop()
     void process();
 
+    /// Process an interactive bench testing/simulation command character
+    void handleSerialCommand(char cmd);
+
+    /// Display interactive bench command help menu on Serial Monitor
+    void printHelpMenu();
+
     /// Get current system telemetry snapshot
     SystemTelemetry getTelemetry() const;
 
@@ -56,6 +62,7 @@ private:
 
     void transitionTo(SystemState newState);
     void logHeartbeatDiagnostics();
+    void printCurrentStatus();
 };
 
 #endif // SAFETY_CONTROLLER_H

@@ -29,6 +29,9 @@ public:
 
     /// Get current network registration status
     virtual GsmNetworkStatus getNetworkStatus() const = 0;
+
+    /// Reset SMS cooldown timer (e.g., for bench testing)
+    virtual void resetCooldown() {}
 };
 
 #endif // I_NOTIFICATION_SERVICE_H

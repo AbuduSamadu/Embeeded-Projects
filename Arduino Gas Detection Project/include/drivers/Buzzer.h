@@ -26,7 +26,7 @@ public:
     bool isActive() const override;
 
     /// Optional one-shot beep for UI feedback (e.g., boot completion)
-    void beepOnce(unsigned long durationMs = 100);
+    void beepOnce(unsigned long durationMs = 100) override;
 
 private:
     const uint8_t _pin;

@@ -214,6 +214,16 @@ If the LCD display stays blank or shows solid boxes, verify its I2C address usin
    - System triggers: Buzzer pulses, Relay instantly opens (Lamp OFF), LCD shows `WARNING DETECTED`, SMS alert is submitted.
    - Once gas dissipates below recovery threshold, system confirms recovery, silences buzzer, sends recovery SMS, and re-engages normal lighting.
 
+### Test 7: Interactive Serial Monitor Bench Simulation
+For bench testing and validation without smoke or gas:
+- `t` : Simulate gas spike (`ADC = 750`) to verify alarm trigger and safety lockout.
+- `n` : Simulate clean air (`ADC = 180`) to verify hysteresis recovery.
+- `c` : Clear simulation and return to physical MQ-2 reading.
+- `b` : Test buzzer beep (1 second sound test).
+- `s` : Test dispatching SMS to the configured recipient.
+- `l` : Toggle demonstration lamp (only permitted during `NORMAL` state).
+- `h` : Print interactive command help menu.
+
 ---
 
 ## 6. Safety & Educational Prototype Disclaimer

@@ -30,6 +30,9 @@ void Buzzer::activate() {
 void Buzzer::deactivate() {
     _isEnabled = false;
     writeOutput(false);
+    if (SystemConfig::BUZZER_IS_PASSIVE) {
+        noTone(_pin);
+    }
 }
 
 void Buzzer::update() {
@@ -58,6 +61,14 @@ void Buzzer::beepOnce(unsigned long durationMs) {
 
 void Buzzer::writeOutput(bool active) {
     _isPhysicalHigh = active;
-    uint8_t pinLevel = (_activeHigh ? (active ? HIGH : LOW) : (active ? LOW : HIGH));
-    digitalWrite(_pin, pinLevel);
+    if (SystemConfig::BUZZER_IS_PASSIVE) {
+        if (active) {
+            tone(_pin, SystemConfig::BUZZER_TONE_FREQ_HZ);
+        } else {
+            noTone(_pin);
+        }
+    } else {
+        uint8_t pinLevel = (_activeHigh ? (active ? HIGH : LOW) : (active ? LOW : HIGH));
+        digitalWrite(_pin, pinLevel);
+    }
 }

@@ -222,6 +222,10 @@ bool Sim800lGsm::isSmsDispatched() const {
     return _smsDispatched;
 }
 
+void Sim800lGsm::resetCooldown() {
+    _lastSmsTime = 0;
+}
+
 void Sim800lGsm::processIncomingBytes() {
     while (_serial.available() > 0) {
         char c = static_cast<char>(_serial.read());

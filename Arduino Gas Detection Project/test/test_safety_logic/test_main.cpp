@@ -22,8 +22,9 @@ public:
     uint16_t filtered;
     uint16_t threshold;
     uint16_t hysteresis;
+    bool simulated;
 
-    MockSensor() : raw(100), filtered(100), threshold(350), hysteresis(50) {}
+    MockSensor() : raw(100), filtered(100), threshold(350), hysteresis(50), simulated(false) {}
 
     void init() override {}
     void update() override {}
@@ -37,6 +38,22 @@ public:
 
     bool isRecoveryLevel() const override {
         return filtered <= (threshold - hysteresis);
+    }
+
+    void setSimulatedValue(uint16_t value) override {
+        simulated = true;
+        raw = value;
+        filtered = value;
+    }
+
+    void clearSimulation() override {
+        simulated = false;
+        raw = 100;
+        filtered = 100;
+    }
+
+    bool isSimulated() const override {
+        return simulated;
     }
 };
 
@@ -164,12 +181,50 @@ void test_safety_controller_initial_state() {
     TEST_ASSERT_FALSE(relay.isActive());
 }
 
+void test_bench_serial_commands() {
+    MockSensor sensor;
+    MockActuator buzzer;
+    MockActuator relay;
+    MockDisplay display;
+    MockNotificationService notifier;
+
+    SafetyController controller(sensor, buzzer, relay, display, notifier);
+    controller.begin();
+
+    // Command 't': simulate gas spike (750)
+    controller.handleSerialCommand('t');
+    TEST_ASSERT_TRUE(sensor.isSimulated());
+    TEST_ASSERT_EQUAL_UINT16(750, sensor.getFilteredValue());
+    TEST_ASSERT_TRUE(sensor.isThresholdExceeded());
+
+    // Command 'n': simulate clean air (180)
+    controller.handleSerialCommand('n');
+    TEST_ASSERT_TRUE(sensor.isSimulated());
+    TEST_ASSERT_EQUAL_UINT16(180, sensor.getFilteredValue());
+    TEST_ASSERT_TRUE(sensor.isRecoveryLevel());
+
+    // Command 'c': clear simulation
+    controller.handleSerialCommand('c');
+    TEST_ASSERT_FALSE(sensor.isSimulated());
+    TEST_ASSERT_EQUAL_UINT16(100, sensor.getFilteredValue());
+
+    // Command 's': test SMS dispatch
+    notifier.alertSent = false;
+    controller.handleSerialCommand('s');
+    TEST_ASSERT_TRUE(notifier.alertSent);
+
+    // Command 'l': toggle lamp in non-NORMAL (WARMUP) -> must be rejected
+    controller.handleSerialCommand('l');
+    TEST_ASSERT_FALSE(relay.isActive());
+}
+
 void setup() {
     delay(2000);
     UNITY_BEGIN();
     RUN_TEST(test_sensor_threshold_and_hysteresis);
     RUN_TEST(test_relay_and_buzzer_mocks);
     RUN_TEST(test_safety_controller_initial_state);
+    RUN_TEST(test_bench_serial_commands);
     UNITY_END();
 }
 

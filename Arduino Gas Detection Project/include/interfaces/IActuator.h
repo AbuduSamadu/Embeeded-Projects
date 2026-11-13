@@ -26,6 +26,9 @@ public:
 
     /// Returns true if the actuator is currently active / operating
     virtual bool isActive() const = 0;
+
+    /// Optional one-shot activation for UI feedback or hardware test
+    virtual void beepOnce(unsigned long durationMs = 100) { (void)durationMs; }
 };
 
 #endif // I_ACTUATOR_H

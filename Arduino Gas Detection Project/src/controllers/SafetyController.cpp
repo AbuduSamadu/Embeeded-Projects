@@ -42,10 +42,19 @@ void SafetyController::begin() {
     _notification.init();
 
     Serial.println(F("[SAFETY] Peripherals initialized. Starting sensor warm-up..."));
+    printHelpMenu();
     transitionTo(SystemState::WARMUP);
 }
 
 void SafetyController::process() {
+    // 0. Non-blocking serial command processing for bench testing & simulation
+    while (Serial.available() > 0) {
+        char cmd = static_cast<char>(Serial.read());
+        if (cmd != '\r' && cmd != '\n' && cmd != ' ') {
+            handleSerialCommand(cmd);
+        }
+    }
+
     // 1. Non-blocking update of all hardware peripherals
     _sensor.update();
     _buzzer.update();
@@ -181,18 +190,25 @@ void SafetyController::transitionTo(SystemState newState) {
             _buzzer.deactivate();
             if (SystemConfig::RELAY_LAMP_NORMAL_ON) {
                 _relay.activate();
+                Serial.println(F("[SAFETY] ACTUATORS: Relay turned ON (Demonstration lamp energized)."));
             } else {
                 _relay.deactivate();
             }
+            printCurrentStatus();
             break;
 
         case SystemState::ALARM:
             _relay.deactivate(); // Safe state: cut power to demonstration lamp
             _buzzer.activate();   // Audible warning cadence
+            Serial.println(F("[SAFETY] ACTUATORS: Relay turned OFF (Demonstration lamp CUT OFF for spark safety)."));
+            Serial.println(F("[SAFETY] ACTUATORS: Buzzer turned ON (Pulsing audible alarm)."));
+            printCurrentStatus();
             break;
 
         case SystemState::RECOVERY:
             _buzzer.deactivate();
+            Serial.println(F("[SAFETY] ACTUATORS: Recovery entered. Buzzer silenced."));
+            printCurrentStatus();
             break;
     }
 }
@@ -227,7 +243,11 @@ void SafetyController::logHeartbeatDiagnostics() {
     if (now - _lastSerialLogTime < SystemConfig::SERIAL_LOG_INTERVAL_MS) {
         return;
     }
-    _lastSerialLogTime = now;
+    printCurrentStatus();
+}
+
+void SafetyController::printCurrentStatus() {
+    _lastSerialLogTime = millis();
 
     Serial.print(F("[STATUS] State: "));
     switch (_state) {
@@ -242,6 +262,9 @@ void SafetyController::logHeartbeatDiagnostics() {
     Serial.print(_sensor.getRawValue());
     Serial.print(F(" Filt="));
     Serial.print(_sensor.getFilteredValue());
+    if (_sensor.isSimulated()) {
+        Serial.print(F(" [SIM]"));
+    }
 
     Serial.print(F(" | Relay: "));
     Serial.print(_relay.isActive() ? F("ON") : F("OFF"));
@@ -260,4 +283,94 @@ void SafetyController::logHeartbeatDiagnostics() {
     }
 
     Serial.println();
+}
+
+void SafetyController::handleSerialCommand(char cmd) {
+    switch (cmd) {
+        case 't':
+        case 'T': {
+            Serial.println(F("\n[CMD] 't' received: Simulating gas spike (ADC = 750)..."));
+            _sensor.setSimulatedValue(750);
+            Serial.println(F("[SIM] Gas level set to 750 (Alarm threshold: 350). Verifying safety trigger..."));
+            break;
+        }
+
+        case 'n':
+        case 'N': {
+            Serial.println(F("\n[CMD] 'n' received: Simulating clean air (ADC = 180)..."));
+            _sensor.setSimulatedValue(180);
+            Serial.println(F("[SIM] Gas level set to 180 (Recovery threshold: 300). Verifying hysteresis recovery..."));
+            break;
+        }
+
+        case 'c':
+        case 'C': {
+            Serial.println(F("\n[CMD] 'c' received: Clearing simulation..."));
+            _sensor.clearSimulation();
+            Serial.println(F("[SIM] Simulation cleared. Reverted to physical MQ-2 sensor readings."));
+            break;
+        }
+
+        case 'b':
+        case 'B': {
+            Serial.println(F("\n[CMD] 'b' received: Testing buzzer alert (1 sec test pulse)..."));
+            _buzzer.beepOnce(1000);
+            Serial.println(F("[CMD] Buzzer test complete."));
+            break;
+        }
+
+        case 's':
+        case 'S': {
+            Serial.println(F("\n[CMD] 's' received: Testing SMS alert dispatch..."));
+            _notification.resetCooldown();
+            if (_notification.sendAlert()) {
+                Serial.println(F("[SIM] Test SMS alert queued successfully."));
+            } else {
+                Serial.println(F("[SIM] Test SMS dispatch rejected (module busy)."));
+            }
+            break;
+        }
+
+        case 'l':
+        case 'L': {
+            Serial.println(F("\n[CMD] 'l' received: Requesting demonstration lamp toggle..."));
+            if (_state == SystemState::NORMAL) {
+                if (_relay.isActive()) {
+                    _relay.deactivate();
+                    Serial.println(F("[MANUAL] Demonstration lamp toggled OFF."));
+                } else {
+                    _relay.activate();
+                    Serial.println(F("[MANUAL] Demonstration lamp toggled ON."));
+                }
+            } else {
+                Serial.println(F("[SAFETY] Lamp toggle REJECTED: Only permitted during NORMAL state!"));
+            }
+            break;
+        }
+
+        case 'h':
+        case 'H':
+        case '?': {
+            printHelpMenu();
+            break;
+        }
+
+        default:
+            // Ignore unrecognized characters (e.g. whitespace or unassigned keys)
+            break;
+    }
+}
+
+void SafetyController::printHelpMenu() {
+    Serial.println(F("\n=================================================="));
+    Serial.println(F("       BENCH TESTING & SIMULATION COMMANDS        "));
+    Serial.println(F("=================================================="));
+    Serial.println(F("  t : Simulate gas spike (ADC = 750) -> Alarm & Lockout"));
+    Serial.println(F("  n : Simulate clean air (ADC = 180) -> Recovery"));
+    Serial.println(F("  c : Clear simulation -> Physical MQ-2 reading"));
+    Serial.println(F("  b : Test buzzer beep (1 second sound test)"));
+    Serial.println(F("  s : Test dispatching SMS to configured recipient"));
+    Serial.println(F("  l : Toggle demonstration lamp (NORMAL state only)"));
+    Serial.println(F("  h : Print interactive command help menu"));
+    Serial.println(F("==================================================\n"));
 }
